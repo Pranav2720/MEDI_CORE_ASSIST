@@ -340,6 +340,285 @@ BASE_TEMPLATE = """
 """
 
 # -----------------------------------------------------------------------------
+# Lifestyle Recommendation Generator
+# -----------------------------------------------------------------------------
+
+import numpy as np
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.preprocessing import LabelEncoder
+import warnings
+warnings.filterwarnings('ignore')
+
+class LifestyleRecommendationEngine:
+    def __init__(self):
+        self.model = None
+        self.recommendation_encoder = None
+        self.age_groups = ['child', 'young_adult', 'adult', 'senior']
+        self.lifestyle_factors = ['sedentary', 'moderate', 'active']
+        self.risk_levels = ['low', 'medium', 'high']
+        
+        # Comprehensive recommendation database
+        self.recommendation_db = {
+            'general': {
+                'hydration': "Drink at least 8-10 glasses of water daily to maintain proper hydration.",
+                'sleep': "Aim for 7-9 hours of quality sleep each night for optimal health.",
+                'exercise': "Engage in at least 150 minutes of moderate aerobic activity weekly.",
+                'nutrition': "Follow a balanced diet rich in fruits, vegetables, whole grains, and lean proteins.",
+                'stress': "Practice stress management techniques like meditation, deep breathing, or yoga.",
+                'checkup': "Schedule regular health checkups and screenings as recommended by your healthcare provider."
+            },
+            'condition_specific': {
+                'hypertension': [
+                    "Reduce sodium intake to less than 2,300mg per day (ideally 1,500mg).",
+                    "Maintain a healthy weight through diet and exercise.",
+                    "Limit alcohol consumption and avoid smoking.",
+                    "Monitor blood pressure regularly at home."
+                ],
+                'diabetes': [
+                    "Monitor blood glucose levels as directed by your healthcare provider.",
+                    "Follow a consistent meal schedule with controlled carbohydrate intake.",
+                    "Exercise regularly to help control blood sugar levels.",
+                    "Take medications as prescribed and attend regular medical appointments."
+                ],
+                'heart_disease': [
+                    "Follow a heart-healthy diet low in saturated fats and cholesterol.",
+                    "Engage in cardiac rehabilitation if recommended.",
+                    "Take prescribed medications consistently.",
+                    "Monitor symptoms and seek immediate medical attention for chest pain."
+                ],
+                'obesity': [
+                    "Create a sustainable calorie deficit through diet and exercise.",
+                    "Focus on whole foods and portion control.",
+                    "Incorporate both cardiovascular and strength training exercises.",
+                    "Consider working with a registered dietitian for personalized guidance."
+                ],
+                'mental_health': [
+                    "Maintain regular sleep patterns and good sleep hygiene.",
+                    "Stay connected with supportive friends and family.",
+                    "Consider counseling or therapy if symptoms persist.",
+                    "Practice mindfulness, meditation, or other stress-reduction techniques."
+                ]
+            },
+            'age_specific': {
+                'child': [
+                    "Ensure adequate nutrition for growth and development.",
+                    "Encourage outdoor play and physical activity.",
+                    "Maintain regular pediatric checkups and vaccinations.",
+                    "Limit screen time and promote reading and creative activities."
+                ],
+                'young_adult': [
+                    "Establish healthy lifestyle habits early.",
+                    "Focus on building strong social connections.",
+                    "Manage academic or career stress effectively.",
+                    "Avoid risky behaviors like excessive alcohol consumption or smoking."
+                ],
+                'adult': [
+                    "Balance work and personal life to reduce stress.",
+                    "Begin regular health screenings (blood pressure, cholesterol, cancer screenings).",
+                    "Maintain physical fitness to prevent age-related decline.",
+                    "Plan for financial and health security in later years."
+                ],
+                'senior': [
+                    "Stay physically active to maintain mobility and independence.",
+                    "Keep mind active through learning and social engagement.",
+                    "Follow up regularly with healthcare providers for chronic condition management.",
+                    "Ensure home safety to prevent falls and injuries."
+                ]
+            },
+            'symptom_based': {
+                'fatigue': [
+                    "Ensure adequate sleep and maintain a consistent sleep schedule.",
+                    "Evaluate diet for nutritional deficiencies.",
+                    "Gradually increase physical activity to boost energy levels.",
+                    "Consider stress management techniques."
+                ],
+                'headache': [
+                    "Stay hydrated throughout the day.",
+                    "Maintain regular sleep patterns.",
+                    "Identify and avoid potential triggers (stress, certain foods, bright lights).",
+                    "Practice relaxation techniques."
+                ],
+                'back_pain': [
+                    "Maintain good posture, especially when sitting for long periods.",
+                    "Strengthen core muscles through targeted exercises.",
+                    "Use proper body mechanics when lifting heavy objects.",
+                    "Consider ergonomic improvements to your workspace."
+                ],
+                'anxiety': [
+                    "Practice deep breathing exercises and mindfulness meditation.",
+                    "Maintain regular exercise routine to reduce stress hormones.",
+                    "Limit caffeine and alcohol intake.",
+                    "Consider professional counseling if symptoms interfere with daily life."
+                ],
+                'digestive_issues': [
+                    "Eat smaller, more frequent meals throughout the day.",
+                    "Identify and avoid trigger foods.",
+                    "Stay hydrated and include fiber-rich foods in your diet.",
+                    "Manage stress, as it can worsen digestive symptoms."
+                ]
+            }
+        }
+        
+        self._initialize_model()
+    
+    def _initialize_model(self):
+        """Initialize the ML model with synthetic training data."""
+        # Create synthetic training data
+        np.random.seed(42)
+        n_samples = 1000
+        
+        # Features: age_group, gender, has_chronic_condition, activity_level, bmi_category, symptom_severity
+        features = []
+        labels = []
+        
+        for _ in range(n_samples):
+            age_group = np.random.randint(0, 4)  # 0-3 for child, young_adult, adult, senior
+            gender = np.random.randint(0, 2)  # 0-1 for female, male
+            has_chronic = np.random.randint(0, 2)  # 0-1 for no, yes
+            activity_level = np.random.randint(0, 3)  # 0-2 for sedentary, moderate, active
+            bmi_category = np.random.randint(0, 4)  # 0-3 for underweight, normal, overweight, obese
+            symptom_severity = np.random.randint(0, 3)  # 0-2 for mild, moderate, severe
+            
+            features.append([age_group, gender, has_chronic, activity_level, bmi_category, symptom_severity])
+            
+            # Generate recommendation category based on features
+            if has_chronic:
+                if age_group >= 2:  # adult or senior
+                    rec_category = 'chronic_management'
+                else:
+                    rec_category = 'preventive_care'
+            elif activity_level == 0:  # sedentary
+                rec_category = 'fitness_improvement'
+            elif symptom_severity >= 1:  # moderate to severe symptoms
+                rec_category = 'symptom_management'
+            else:
+                rec_category = 'wellness_maintenance'
+            
+            labels.append(rec_category)
+        
+        # Train the model
+        self.model = RandomForestClassifier(n_estimators=100, random_state=42)
+        self.model.fit(features, labels)
+        
+        # Create label encoder for recommendations
+        self.recommendation_encoder = LabelEncoder()
+        self.recommendation_encoder.fit(['chronic_management', 'preventive_care', 'fitness_improvement', 
+                                       'symptom_management', 'wellness_maintenance'])
+    
+    def get_age_group(self, age):
+        """Convert age to age group."""
+        if age < 18:
+            return 0  # child
+        elif age < 30:
+            return 1  # young_adult
+        elif age < 65:
+            return 2  # adult
+        else:
+            return 3  # senior
+    
+    def get_bmi_category(self, height_cm, weight_kg):
+        """Calculate BMI category."""
+        if height_cm and weight_kg:
+            bmi = weight_kg / ((height_cm / 100) ** 2)
+            if bmi < 18.5:
+                return 0  # underweight
+            elif bmi < 25:
+                return 1  # normal
+            elif bmi < 30:
+                return 2  # overweight
+            else:
+                return 3  # obese
+        return 1  # default to normal if no data
+    
+    def generate_recommendations(self, user_profile):
+        """Generate personalized lifestyle recommendations."""
+        try:
+            # Extract features from user profile
+            age = user_profile.get('age', 30)
+            gender = 1 if user_profile.get('gender', '').lower() == 'male' else 0
+            height = user_profile.get('height_cm', 170)
+            weight = user_profile.get('weight_kg', 70)
+            activity_level = user_profile.get('activity_level', 1)  # 0-2
+            symptoms = user_profile.get('symptoms', [])
+            conditions = user_profile.get('conditions', [])
+            symptom_severity = user_profile.get('symptom_severity', 0)  # 0-2
+            
+            # Prepare features for ML model
+            age_group = self.get_age_group(age)
+            has_chronic = 1 if conditions else 0
+            bmi_category = self.get_bmi_category(height, weight)
+            
+            features = [[age_group, gender, has_chronic, activity_level, bmi_category, symptom_severity]]
+            
+            # Get ML prediction
+            prediction = self.model.predict(features)[0]
+            prediction_proba = self.model.predict_proba(features)[0]
+            
+            # Generate comprehensive recommendations
+            recommendations = {
+                'category': prediction,
+                'confidence': float(max(prediction_proba)),
+                'general_recommendations': [],
+                'specific_recommendations': [],
+                'age_specific': [],
+                'priority_level': 'medium'
+            }
+            
+            # Add general recommendations
+            recommendations['general_recommendations'] = [
+                self.recommendation_db['general']['hydration'],
+                self.recommendation_db['general']['sleep'],
+                self.recommendation_db['general']['exercise'],
+                self.recommendation_db['general']['nutrition']
+            ]
+            
+            # Add age-specific recommendations
+            age_group_name = self.age_groups[age_group]
+            recommendations['age_specific'] = self.recommendation_db['age_specific'][age_group_name]
+            
+            # Add condition-specific recommendations
+            if conditions:
+                for condition in conditions:
+                    condition_lower = condition.lower().replace(' ', '_')
+                    if condition_lower in self.recommendation_db['condition_specific']:
+                        recommendations['specific_recommendations'].extend(
+                            self.recommendation_db['condition_specific'][condition_lower]
+                        )
+                recommendations['priority_level'] = 'high'
+            
+            # Add symptom-based recommendations
+            if symptoms:
+                for symptom in symptoms:
+                    symptom_lower = symptom.lower().replace(' ', '_')
+                    if symptom_lower in self.recommendation_db['symptom_based']:
+                        recommendations['specific_recommendations'].extend(
+                            self.recommendation_db['symptom_based'][symptom_lower]
+                        )
+            
+            # Determine priority level
+            if symptom_severity >= 2 or has_chronic:
+                recommendations['priority_level'] = 'high'
+            elif symptom_severity >= 1 or activity_level == 0:
+                recommendations['priority_level'] = 'medium'
+            else:
+                recommendations['priority_level'] = 'low'
+            
+            # Remove duplicates while preserving order
+            recommendations['specific_recommendations'] = list(dict.fromkeys(recommendations['specific_recommendations']))
+            
+            return recommendations
+            
+        except Exception as e:
+            return {
+                'error': f'Failed to generate recommendations: {str(e)}',
+                'general_recommendations': [self.recommendation_db['general']['checkup']],
+                'priority_level': 'medium'
+            }
+
+# Initialize the lifestyle recommendation engine
+lifestyle_engine = LifestyleRecommendationEngine()
+
+# -----------------------------------------------------------------------------
 # Routes
 # -----------------------------------------------------------------------------
 
@@ -527,6 +806,42 @@ def api_ai_full_consultation():
         'response_text': response_text,
         'response_audio': audio_base64
     })
+
+@app.route('/api/lifestyle-recommendations', methods=['POST'])
+def api_lifestyle_recommendations():
+    """Generate personalized lifestyle recommendations based on user profile."""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+        
+        # Extract user profile from request
+        user_profile = {
+            'age': data.get('age', 30),
+            'gender': data.get('gender', ''),
+            'height_cm': data.get('height_cm'),
+            'weight_kg': data.get('weight_kg'),
+            'activity_level': data.get('activity_level', 1),  # 0=sedentary, 1=moderate, 2=active
+            'symptoms': data.get('symptoms', []),
+            'conditions': data.get('conditions', []),
+            'symptom_severity': data.get('symptom_severity', 0)  # 0=mild, 1=moderate, 2=severe
+        }
+        
+        # Generate recommendations
+        recommendations = lifestyle_engine.generate_recommendations(user_profile)
+        
+        return jsonify({
+            'success': True,
+            'user_profile': user_profile,
+            'recommendations': recommendations,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'Failed to generate recommendations: {str(e)}'
+        }), 500
 
 @app.route('/health')
 def health():

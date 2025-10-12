@@ -4,6 +4,7 @@ import SymptomSelector from './components/SymptomSelector';
 import PredictionResult from './components/PredictionResult';
 import MetaBar from './components/MetaBar';
 import AIConsultation from './components/AIConsultation';
+import LifestyleRecommendations from './components/LifestyleRecommendations';
 
 function App() {
   const [symptoms, setSymptoms] = useState([]);
@@ -74,6 +75,12 @@ function App() {
             🔬 Disease Prediction
           </button>
           <button 
+            className={`tab-btn ${activeTab === 'lifestyle' ? 'active' : ''}`}
+            onClick={() => setActiveTab('lifestyle')}
+          >
+            🌱 Lifestyle Recommendations
+          </button>
+          <button 
             className={`tab-btn ${activeTab === 'consultation' ? 'active' : ''}`}
             onClick={() => setActiveTab('consultation')}
           >
@@ -115,6 +122,12 @@ function App() {
             </div>
 
             {result && <PredictionResult data={result} />}
+          </div>
+        )}
+
+        {activeTab === 'lifestyle' && (
+          <div className="main-content">
+            <LifestyleRecommendations />
           </div>
         )}
 
